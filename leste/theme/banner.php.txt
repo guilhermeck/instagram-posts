@@ -16,3 +16,14 @@ function ln_render_banner_970() {
     echo '<div class="ln-bn"><small>PUBLICIDADE</small><div class="ln-bn-box"><iframe src="' . esc_url($src) . '" title="Publicidade" scrolling="no" loading="lazy"></iframe></div></div>';
     echo '<script>(function(){function f(){document.querySelectorAll(".ln-bn-box").forEach(function(b){var i=b.querySelector("iframe");i.style.transform="scale("+(b.clientWidth/970)+")";});}f();window.addEventListener("resize",f);})();</script>';
 }
+/* Banner também no meio das matérias (depois do 2º parágrafo) */
+add_filter('the_content', function ($c) {
+    static $done = false;
+    if ($done || is_admin() || !is_singular('post') || !is_main_query() || has_tag('horoscopo') || get_the_ID() !== get_queried_object_id()) { return $c; }
+    $pos = 0;
+    for ($n = 0; $n < 2; $n++) { $pos = strpos($c, '</p>', $pos); if ($pos === false) { return $c; } $pos += 4; }
+    if (strpos($c, '</p>', $pos) === false) { return $c; }
+    $done = true;
+    ob_start(); ln_render_banner_970(); $bn = ob_get_clean();
+    return substr($c, 0, $pos) . $bn . substr($c, $pos);
+}, 20);
