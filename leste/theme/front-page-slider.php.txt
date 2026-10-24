@@ -112,6 +112,11 @@ $br = array_merge(ln_posts_cat('Brasil', 3), ln_posts_cat('Paraná', 3));
 usort($br, fn($a, $b) => strcmp($b->post_date, $a->post_date));
 if ($br) { ln_section_heading('Brasil e Paraná', 'Notícias e atualizações'); echo '<div class="story-grid">'; foreach (array_slice($br, 0, 6) as $p) { ln_news_card($p); } echo '</div>'; }
 
+/* Trânsito agora — mapa ao vivo do Waze, acima do horóscopo */
+ln_section_heading('Trânsito agora', 'Mapa ao vivo de Telêmaco Borba');
+echo '<style>.ln-transito-home{margin:8px 0 28px}.ln-transito-home .ln-tr-map{position:relative;width:100%;height:0;padding-bottom:56.25%;border-radius:12px;overflow:hidden;border:1px solid #dfe4ee;background:#eef1f6}.ln-transito-home iframe{position:absolute;inset:0;width:100%;height:100%;border:0}.ln-transito-home .ln-tr-foot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12px;color:#6b7280;margin-top:8px}.ln-transito-home .ln-tr-foot a{color:#0AA6A0;font-weight:700;text-decoration:none}@media(max-width:600px){.ln-transito-home .ln-tr-map{padding-bottom:110%}}</style>';
+echo '<div class="ln-transito-home"><div class="ln-tr-map"><iframe src="https://embed.waze.com/iframe?zoom=15&lat=-24.319997&lon=-50.630773&ct=livemap" title="Mapa de trânsito ao vivo de Telêmaco Borba (Waze)" loading="lazy" allowfullscreen></iframe></div><div class="ln-tr-foot"><span>Informações em tempo real enviadas por usuários do Waze.</span><a href="https://www.waze.com/live-map/directions?latlng=-24.319997%2C-50.630773" target="_blank" rel="noopener">Abrir no Waze →</a></div></div>';
+
 /* Horóscopo do dia (Entretenimento) — fixo acima do rodapé, atualizado diariamente */
 $horo = $ln_hz ? get_posts(['numberposts' => 1, 'tag_id' => $ln_hz->term_id]) : [];
 if ($horo) {
