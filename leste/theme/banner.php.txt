@@ -27,3 +27,9 @@ add_filter('the_content', function ($c) {
     ob_start(); ln_render_banner_970(); $bn = ob_get_clean();
     return substr($c, 0, $pos) . $bn . substr($c, $pos);
 }, 20);
+/* Banner GC 15 anos (970x248), só na página inicial, entre "Brasil e Paraná" e "Trânsito agora" */
+function ln_render_banner_gc15() {
+    $src = add_query_arg('ln_banner', 'gc15', home_url('/'));
+    echo '<div class="ln-bn ln-bn-gc15"><small>PUBLICIDADE</small><div class="ln-bn-box" style="aspect-ratio:970/248"><iframe src="' . esc_url($src) . '" title="Publicidade: Grupo Guilherme Charneski 15 anos" scrolling="no" loading="lazy" style="height:248px"></iframe></div></div>';
+    echo '<script>(function(){function f(){document.querySelectorAll(".ln-bn-gc15 .ln-bn-box").forEach(function(b){var i=b.querySelector("iframe");i.style.transform="scale("+(b.clientWidth/970)+")";});}f();window.addEventListener("resize",f);})();</script>';
+}
