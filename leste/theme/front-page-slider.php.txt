@@ -1,0 +1,123 @@
+<?php get_header(); $used = []; $ln_hz = get_term_by('slug', 'horoscopo', 'post_tag'); $ln_hz_ex = $ln_hz ? [$ln_hz->term_id] : []; ?>
+<main class="container main-content">
+<?php if (get_theme_mod('ln_ultimas_on', 1)) { $last = get_posts(['numberposts' => 1, 'tag__not_in' => $ln_hz_ex]); if ($last) { echo '<div class="breaking"><strong>ÚLTIMAS</strong><a href="' . esc_url(get_permalink($last[0])) . '">' . esc_html(get_the_title($last[0])) . '</a></div>'; } } ?>
+<?php
+/* Em destaque: slider com as 5 matérias mais recentes (a última publicada abre o slider); as 2 seguintes ficam ao lado */
+$hero = get_posts(['numberposts' => 7, 'ignore_sticky_posts' => true, 'orderby' => 'date', 'order' => 'DESC', 'category__not_in' => array_filter([get_cat_ID('Colunas')]), 'tag__not_in' => $ln_hz_ex]);
+if ($hero) {
+    ln_section_heading('Em destaque', 'As principais notícias');
+    $slides = array_slice($hero, 0, 5);
+    $side = array_slice($hero, 5, 2);
+    if (count($side) < 2 && count($slides) > 3) { $side = array_slice($hero, 1, 2); }
+    ?>
+<style>
+.ln-slider{position:relative;display:grid;min-width:0}
+.ln-slide{grid-area:1/1;min-width:0;opacity:0;visibility:hidden;transition:opacity .7s ease,visibility 0s linear .7s}
+.ln-slide.on{opacity:1;visibility:visible;transition:opacity .7s ease;z-index:1}
+.ln-slide>.story{height:100%}
+.ln-slide .ph img{transform:scale(1.04);transition:transform 6.5s ease-out}
+.ln-slide.on .ph img{transform:scale(1)}
+.ln-slide .ph{overflow:hidden;display:block}
+.ln-sl-nav{position:absolute;z-index:3;top:14px;right:14px;display:flex;gap:6px}
+.ln-sl-nav button{width:36px;height:36px;border-radius:50%;border:0;background:rgba(6,18,47,.78);color:#fff;font-size:22px;line-height:1;cursor:pointer;padding:0 0 3px}
+.ln-sl-nav button:hover{background:#0AA6A0}
+.ln-sl-dots{position:absolute;z-index:3;left:14px;right:14px;bottom:10px;display:flex;gap:5px}
+.ln-sl-dots button{flex:1;height:4px;border:0;padding:0;border-radius:2px;background:rgba(255,255,255,.28);cursor:pointer;position:relative;overflow:hidden}
+.ln-sl-dots button i{position:absolute;left:0;top:0;bottom:0;width:0;background:#0AA6A0}
+.ln-sl-dots button.done i{width:100%}
+.ln-sl-dots button.on i{animation:lnbar 6s linear forwards}
+.ln-slider.paused .ln-sl-dots button.on i{animation-play-state:paused}
+@keyframes lnbar{to{width:100%}}
+@media (prefers-reduced-motion:reduce){.ln-slide,.ln-slide .ph img{transition:none}}
+</style>
+<?php
+    echo '<div class="hero-grid"><div class="ln-slider" aria-roledescription="carrossel" aria-label="Matérias em destaque">';
+    foreach ($slides as $i => $p) { echo '<div class="ln-slide' . ($i ? '' : ' on') . '" aria-hidden="' . ($i ? 'true' : 'false') . '">'; ln_news_card($p, true); echo '</div>'; }
+    if (count($slides) > 1) {
+        echo '<div class="ln-sl-nav"><button type="button" class="prev" aria-label="Matéria anterior">&#8249;</button><button type="button" class="next" aria-label="Próxima matéria">&#8250;</button></div><div class="ln-sl-dots">';
+        foreach ($slides as $i => $p) { echo '<button type="button" aria-label="Ir para a matéria ' . ($i + 1) . '"' . ($i ? '' : ' class="on"') . '><i></i></button>'; }
+        echo '</div>';
+    }
+    echo '</div><div class="side-hero">';
+    foreach ($side as $p) { ln_news_card($p, false, true); }
+    echo '</div></div>';
+    ?>
+<script>
+(function(){
+  var s=document.querySelector('.ln-slider'); if(!s) return;
+  var sl=s.querySelectorAll('.ln-slide'), dt=s.querySelectorAll('.ln-sl-dots button'); if(sl.length<2) return;
+  s.querySelectorAll('img[loading="lazy"]').forEach(function(im){im.loading='eager';});
+  var i=0, t=null, ms=6000;
+  function go(n){
+    sl[i].classList.remove('on'); sl[i].setAttribute('aria-hidden','true'); dt[i].classList.remove('on');
+    i=(n+sl.length)%sl.length;
+    for(var k=0;k<dt.length;k++){ dt[k].classList.toggle('done',k<i); }
+    sl[i].classList.add('on'); sl[i].setAttribute('aria-hidden','false');
+    void dt[i].offsetWidth; dt[i].classList.add('on'); plan();
+  }
+  function plan(){ clearTimeout(t); if(!s.classList.contains('paused')) t=setTimeout(function(){ go(i+1); },ms); }
+  s.querySelector('.next').addEventListener('click',function(e){e.preventDefault();go(i+1);});
+  s.querySelector('.prev').addEventListener('click',function(e){e.preventDefault();go(i-1);});
+  dt.forEach(function(b,k){ b.addEventListener('click',function(e){e.preventDefault();go(k);}); });
+  s.addEventListener('mouseenter',function(){ s.classList.add('paused'); clearTimeout(t); });
+  s.addEventListener('mouseleave',function(){ s.classList.remove('paused'); go(i); });
+  var x0=null;
+  s.addEventListener('touchstart',function(e){ x0=e.touches[0].clientX; },{passive:true});
+  s.addEventListener('touchend',function(e){ if(x0===null) return; var dx=e.changedTouches[0].clientX-x0; if(Math.abs(dx)>40) go(i+(dx<0?1:-1)); x0=null; });
+  plan();
+})();
+</script>
+<?php
+    $used = wp_list_pluck($hero, 'ID');
+} else {
+    echo '<p class="empty">Ainda não há notícias publicadas. O painel editorial já pode receber matérias.</p>';
+}
+
+$blocks = [['Política', 'Cobertura política'], ['Cidade', 'Telêmaco Borba e Campos Gerais'], ['Economia', 'Emprego, preços e negócios']];
+foreach ($blocks as $i => [$name, $sub]) {
+    /* cada editoria mostra sempre as matérias mais recentes dela, mesmo que já estejam no destaque */
+    $posts = ln_posts_cat($name, $name === 'Cidade' ? 4 : 3);
+    if (!$posts) { continue; }
+    $used = array_merge($used, wp_list_pluck($posts, 'ID'));
+    ln_section_heading($name, $sub, ln_cat_link($name));
+    if ($name === 'Cidade') {
+        echo '<div class="two-col"><div class="story-grid g2">';
+        foreach (array_slice($posts, 0, 4) as $p) { ln_news_card($p); }
+        echo '</div><div><div class="section-heading tight"><h2>Mais lidas</h2></div><div class="list">';
+        $top = get_posts(['numberposts' => 5, 'meta_key' => '_ln_views', 'orderby' => 'meta_value_num', 'order' => 'DESC', 'date_query' => [['after' => '30 days ago']]]);
+        if (count($top) < 5) { $top = array_merge($top, get_posts(['numberposts' => 5 - count($top), 'post__not_in' => wp_list_pluck($top, 'ID'), 'tag__not_in' => $ln_hz_ex])); }
+        foreach ($top as $n => $p) { echo '<a href="' . esc_url(get_permalink($p)) . '"><b>' . ($n + 1) . '</b><span>' . esc_html(get_the_title($p)) . '</span></a>'; }
+        echo '</div></div></div>';
+    } else {
+        echo '<div class="story-grid">'; foreach ($posts as $p) { ln_news_card($p); } echo '</div>';
+    }
+}
+
+/* Colunistas: último texto de cada colunista */
+$colunas = ln_posts_cat('Colunas', 12);
+$seen = []; $cards = [];
+foreach ($colunas as $p) { if (isset($seen[$p->post_author])) { continue; } $seen[$p->post_author] = 1; $cards[] = $p; if (count($cards) === 4) { break; } }
+if ($cards) {
+    ln_section_heading('Colunistas', 'Opinião assinada', ln_cat_link('Colunas'));
+    echo '<div class="cols">';
+    $tones = ['#1d4e89', '#079442', '#00a6a6', '#c9a400'];
+    foreach ($cards as $i => $p) {
+        $a = get_userdata($p->post_author); $tema = get_user_meta($p->post_author, 'ln_coluna', true);
+        echo '<a class="colunista" href="' . esc_url(get_permalink($p)) . '"><span class="avatar" style="background:' . $tones[$i % 4] . '">' . esc_html(ln_initials($a->display_name)) . '</span><div><small>' . esc_html($tema ?: 'Coluna') . '</small><strong>' . esc_html($a->display_name) . '</strong><p>' . esc_html(get_the_title($p)) . '</p></div></a>';
+    }
+    echo '</div>';
+}
+
+$br = array_merge(ln_posts_cat('Brasil', 3), ln_posts_cat('Paraná', 3));
+usort($br, fn($a, $b) => strcmp($b->post_date, $a->post_date));
+if ($br) { ln_section_heading('Brasil e Paraná', 'Notícias e atualizações'); echo '<div class="story-grid">'; foreach (array_slice($br, 0, 6) as $p) { ln_news_card($p); } echo '</div>'; }
+
+/* Horóscopo do dia (Entretenimento) — fixo acima do rodapé, atualizado diariamente */
+$horo = $ln_hz ? get_posts(['numberposts' => 1, 'tag_id' => $ln_hz->term_id]) : [];
+if ($horo) {
+    ln_section_heading('Horóscopo do dia', 'Entretenimento', ln_cat_link('Entretenimento'));
+    echo '<div class="ln-horo-home">' . apply_filters('the_content', $horo[0]->post_content) . '</div>';
+}
+?>
+</main>
+<?php get_footer(); ?>
