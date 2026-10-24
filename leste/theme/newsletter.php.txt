@@ -1,0 +1,84 @@
+
+/* ---------- Newsletter Leste News: inscrição, resumo diário e descadastro ---------- */
+function ln_nl_subs() { $s = get_option('ln_newsletter_subs', []); return is_array($s) ? $s : []; }
+
+function ln_render_newsletter() {
+    $st = isset($_GET['ln_news']) ? sanitize_key($_GET['ln_news']) : '';
+    $msg = ['ok' => 'Pronto! Você vai receber as notícias do Leste News no seu e-mail.', 'dup' => 'Este e-mail já está cadastrado.', 'err' => 'E-mail inválido. Confira e tente de novo.', 'sair' => 'Seu e-mail foi removido da lista.'];
+    echo '<style>.ln-nl{background:#0AA6A0;color:#fff}.ln-nl .container{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}.ln-nl p{margin:0;font-size:14px;font-weight:700}.ln-nl p small{display:block;font-weight:400;opacity:.9;font-size:12px}.ln-nl form{display:flex;gap:8px;flex:1;max-width:460px;min-width:260px}.ln-nl input[type=email]{flex:1;min-width:0;border:0;border-radius:8px;padding:10px 12px;font-size:14px}.ln-nl button{border:0;border-radius:8px;padding:10px 16px;background:#06122F;color:#fff;font-weight:700;cursor:pointer;white-space:nowrap}.ln-nl button:hover{background:#0f2150}.ln-nl .hp{position:absolute;left:-9999px}.ln-nl .ln-nl-msg{width:100%;font-size:13px;font-weight:700;background:rgba(6,18,47,.25);padding:6px 10px;border-radius:6px}</style>';
+    echo '<section class="ln-nl" aria-label="Newsletter"><div class="container"><p>Receba as notícias do Leste News no seu e-mail<small>Um resumo por dia, de graça. Você pode sair quando quiser.</small></p>';
+    echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '"><input type="hidden" name="action" value="ln_newsletter"><input type="hidden" name="back" value="' . esc_url(home_url('/' . ($GLOBALS['wp']->request ?? ''))) . '"><label class="hp">Não preencha <input type="text" name="ln_site" tabindex="-1" autocomplete="off"></label><input type="email" name="ln_email" required placeholder="Seu melhor e-mail" aria-label="Seu e-mail"><button type="submit">Quero receber</button></form>';
+    if ($st && isset($msg[$st])) { echo '<div class="ln-nl-msg" role="status">' . esc_html($msg[$st]) . '</div>'; }
+    echo '</div></section>';
+}
+
+function ln_nl_back($code) {
+    $back = isset($_POST['back']) ? esc_url_raw(wp_unslash($_POST['back'])) : home_url('/');
+    if (strpos($back, home_url()) !== 0) { $back = home_url('/'); }
+    wp_safe_redirect(add_query_arg('ln_news', $code, $back)); exit;
+}
+add_action('admin_post_nopriv_ln_newsletter', 'ln_nl_handle');
+add_action('admin_post_ln_newsletter', 'ln_nl_handle');
+function ln_nl_handle() {
+    if (!empty($_POST['ln_site'])) { ln_nl_back('ok'); }
+    $email = isset($_POST['ln_email']) ? sanitize_email(wp_unslash($_POST['ln_email'])) : '';
+    if (!$email || !is_email($email)) { ln_nl_back('err'); }
+    $email = strtolower($email); $subs = ln_nl_subs();
+    if (isset($subs[$email])) { ln_nl_back('dup'); }
+    $subs[$email] = ['d' => current_time('mysql'), 't' => wp_generate_password(20, false)];
+    update_option('ln_newsletter_subs', $subs, false);
+    $site = get_bloginfo('name');
+    wp_mail($email, 'Bem-vindo à newsletter do ' . $site, "Olá!\n\nSeu e-mail foi cadastrado e você vai receber um resumo diário das notícias do $site.\n\nPara sair da lista a qualquer momento: " . add_query_arg('ln_unsub', $subs[$email]['t'], home_url('/')) . "\n\n$site\n" . home_url('/'));
+    ln_nl_back('ok');
+}
+
+add_action('init', function () {
+    if (empty($_GET['ln_unsub'])) { return; }
+    $tok = sanitize_text_field(wp_unslash($_GET['ln_unsub'])); $subs = ln_nl_subs();
+    foreach ($subs as $e => $d) { if (!empty($d['t']) && hash_equals($d['t'], $tok)) { unset($subs[$e]); update_option('ln_newsletter_subs', $subs, false); break; } }
+    wp_safe_redirect(add_query_arg('ln_news', 'sair', home_url('/'))); exit;
+});
+
+/* Resumo diário às 19h (horário do site) */
+add_action('init', function () {
+    if (!wp_next_scheduled('ln_newsletter_digest')) {
+        $t = new DateTime('today 19:00', wp_timezone()); if ($t->getTimestamp() < time()) { $t->modify('+1 day'); }
+        wp_schedule_event($t->getTimestamp(), 'daily', 'ln_newsletter_digest');
+    }
+});
+add_action('ln_newsletter_digest', function () {
+    $subs = ln_nl_subs(); if (!$subs) { return; }
+    $hz = get_term_by('slug', 'horoscopo', 'post_tag');
+    $posts = get_posts(['numberposts' => 12, 'date_query' => [['after' => '24 hours ago']], 'tag__not_in' => $hz ? [$hz->term_id] : []]);
+    if (!$posts) { return; }
+    $site = get_bloginfo('name');
+    $items = '';
+    foreach ($posts as $p) {
+        $img = get_the_post_thumbnail_url($p, 'medium');
+        $items .= '<tr><td style="padding:12px 0;border-bottom:1px solid #e5e7eb">' . ($img ? '<img src="' . esc_url($img) . '" width="120" style="float:left;margin-right:12px;border-radius:6px" alt="">' : '') . '<a href="' . esc_url(get_permalink($p)) . '" style="color:#06122F;font-weight:700;font-size:16px;text-decoration:none">' . esc_html(get_the_title($p)) . '</a><div style="color:#555;font-size:13px;margin-top:4px">' . esc_html(wp_trim_words(get_the_excerpt($p), 26)) . '</div></td></tr>';
+    }
+    $head = ['Content-Type: text/html; charset=UTF-8'];
+    $subject = 'Leste News: as notícias de ' . wp_date('d/m');
+    foreach ($subs as $email => $d) {
+        $out = add_query_arg('ln_unsub', $d['t'], home_url('/'));
+        $html = '<div style="font-family:Arial,sans-serif;max-width:600px;margin:auto"><div style="background:#06122F;color:#fff;padding:16px 20px;font-size:20px;font-weight:700">LESTE NEWS <span style="font-size:13px;font-weight:400;opacity:.8">' . esc_html(wp_date('d/m/Y')) . '</span></div><table width="100%" cellspacing="0" cellpadding="0" style="padding:0 20px">' . $items . '</table><p style="padding:16px 20px;font-size:12px;color:#777">Você recebe este e-mail porque se cadastrou em ' . esc_html($site) . '. <a href="' . esc_url($out) . '">Sair da lista</a>.</p></div>';
+        wp_mail($email, $subject, $html, $head);
+    }
+});
+
+/* Painel: Ferramentas > Newsletter (lista e exportação CSV) */
+add_action('admin_menu', function () {
+    add_management_page('Newsletter', 'Newsletter', 'manage_options', 'ln-newsletter', function () {
+        $subs = ln_nl_subs();
+        echo '<div class="wrap"><h1>Newsletter Leste News</h1><p><strong>' . count($subs) . '</strong> inscritos. Resumo diário enviado às 19h com as matérias das últimas 24 horas.</p><p><a class="button button-primary" href="' . esc_url(wp_nonce_url(admin_url('admin-post.php?action=ln_nl_csv'), 'ln_nl_csv')) . '">Exportar CSV</a></p><table class="widefat striped"><thead><tr><th>E-mail</th><th>Data</th></tr></thead><tbody>';
+        foreach (array_reverse($subs, true) as $e => $d) { echo '<tr><td>' . esc_html($e) . '</td><td>' . esc_html($d['d'] ?? '') . '</td></tr>'; }
+        echo '</tbody></table></div>';
+    });
+});
+add_action('admin_post_ln_nl_csv', function () {
+    if (!current_user_can('manage_options') || !check_admin_referer('ln_nl_csv')) { wp_die('Sem permissão'); }
+    header('Content-Type: text/csv; charset=utf-8'); header('Content-Disposition: attachment; filename=newsletter-leste.csv');
+    $f = fopen('php://output', 'w'); fputcsv($f, ['email', 'data']);
+    foreach (ln_nl_subs() as $e => $d) { fputcsv($f, [$e, $d['d'] ?? '']); }
+    fclose($f); exit;
+});
