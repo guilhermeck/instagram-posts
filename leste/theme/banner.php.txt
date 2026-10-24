@@ -1,0 +1,18 @@
+
+/* ---------- Banner HTML5 970x250 (conteúdo guardado na página privada "ln-banner-970") ---------- */
+add_action('template_redirect', function () {
+    if (!isset($_GET['ln_banner'])) { return; }
+    $pg = get_page_by_path('ln-banner-970', OBJECT, 'page');
+    if (!$pg) { status_header(404); exit; }
+    nocache_headers();
+    header('Content-Type: text/html; charset=utf-8');
+    header('X-Robots-Tag: noindex');
+    echo $pg->post_content; // HTML do banner publicado por administrador
+    exit;
+});
+function ln_render_banner_970() {
+    $src = add_query_arg('ln_banner', '970', home_url('/'));
+    echo '<style>.ln-bn{margin:26px auto 30px;max-width:970px}.ln-bn small{display:block;text-align:center;font-size:10px;letter-spacing:2px;color:#9aa3b5;margin-bottom:4px}.ln-bn .ln-bn-box{position:relative;width:100%;aspect-ratio:970/250;overflow:hidden;border-radius:10px}.ln-bn iframe{position:absolute;left:0;top:0;width:970px;height:250px;border:0;transform-origin:0 0}</style>';
+    echo '<div class="ln-bn"><small>PUBLICIDADE</small><div class="ln-bn-box"><iframe src="' . esc_url($src) . '" title="Publicidade" scrolling="no" loading="lazy"></iframe></div></div>';
+    echo '<script>(function(){function f(){document.querySelectorAll(".ln-bn-box").forEach(function(b){var i=b.querySelector("iframe");i.style.transform="scale("+(b.clientWidth/970)+")";});}f();window.addEventListener("resize",f);})();</script>';
+}
