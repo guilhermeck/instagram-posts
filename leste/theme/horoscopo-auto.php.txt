@@ -1,0 +1,85 @@
+
+/* ---------- Horóscopo do dia automático: o próprio site publica todo dia às 00h05 (Brasília) ---------- */
+function ln_horo_signos() {
+    return [
+        ['Áries', '♈', '21/3 a 19/4'], ['Touro', '♉', '20/4 a 20/5'], ['Gêmeos', '♊', '21/5 a 20/6'], ['Câncer', '♋', '21/6 a 22/7'],
+        ['Leão', '♌', '23/7 a 22/8'], ['Virgem', '♍', '23/8 a 22/9'], ['Libra', '♎', '23/9 a 22/10'], ['Escorpião', '♏', '23/10 a 21/11'],
+        ['Sagitário', '♐', '22/11 a 21/12'], ['Capricórnio', '♑', '22/12 a 19/1'], ['Aquário', '♒', '20/1 a 18/2'], ['Peixes', '♓', '19/2 a 20/3'],
+    ];
+}
+function ln_horo_frases() {
+    $a = [
+        'O dia favorece conversas francas.', 'Boas notícias podem chegar por quem você menos espera.', 'A criatividade está em alta.',
+        'É um bom momento para organizar a rotina.', 'Sua intuição está afiada.', 'As amizades ganham destaque.', 'O clima é de recomeço.',
+        'A paciência vai ser sua melhor aliada.', 'Seu bom humor contagia quem está por perto.', 'Pequenas conquistas merecem ser celebradas.',
+        'A família pede um pouco mais de atenção.', 'O trabalho em equipe rende mais do que o esforço sozinho.', 'Você está mais confiante.',
+        'O dia pede leveza nas decisões.', 'Uma ideia antiga pode finalmente sair do papel.', 'A energia está boa para aprender algo novo.',
+        'Você tende a enxergar soluções com mais clareza.', 'É hora de valorizar quem caminha ao seu lado.', 'Seu jeito gentil abre portas.',
+        'O momento é bom para colocar a casa em ordem.', 'Uma mudança de planos pode ser positiva.', 'O romance está no ar.',
+        'Sua disciplina começa a mostrar resultado.', 'Você vai se sentir mais disposto ao longo do dia.', 'Ótimo dia para retomar contatos.',
+        'A tranquilidade ajuda você a fazer boas escolhas.', 'Seu talento chama a atenção de pessoas importantes.', 'O dia traz motivação extra.',
+        'É tempo de cultivar a gratidão.', 'Você sente vontade de sair da rotina.',
+    ];
+    $b = [
+        'Aproveite para resolver pendências.', 'Ouça mais do que fala e tudo flui melhor.', 'Reserve um tempo só para você.',
+        'Evite discussões por detalhes.', 'Uma caminhada ao ar livre pode renovar suas ideias.', 'Compartilhe seus planos com quem confia.',
+        'Não deixe para amanhã aquele recado importante.', 'Arrisque um caminho diferente do habitual.', 'Cuide do seu descanso à noite.',
+        'Seja generoso com você mesmo.', 'Um gesto simples pode alegrar o dia de alguém.', 'Mantenha o foco no que realmente importa.',
+        'Anote as ideias que surgirem: elas podem render bons frutos.', 'Dê o primeiro passo naquele projeto que está parado.',
+        'Valorize os momentos em boa companhia.', 'Pense antes de assumir novos compromissos.', 'Deixe a ansiedade de lado e confie no processo.',
+        'Uma boa conversa pode desfazer um mal-entendido.', 'Organize a agenda e ganhe tempo para o lazer.', 'Abra espaço para o novo.',
+        'Um elogio sincero fortalece suas relações.', 'Aproveite a noite para relaxar.', 'Faça uma pausa e respire fundo antes de decidir.',
+        'Celebre cada avanço, por menor que seja.', 'Procure ver o lado bom das situações.', 'Cuide das suas plantas, dos seus livros e de você.',
+    ];
+    $cores = ['Vermelho', 'Verde', 'Amarelo', 'Azul', 'Prata', 'Dourado', 'Azul-marinho', 'Rosa', 'Vinho', 'Roxo', 'Cinza', 'Azul-claro', 'Verde-água', 'Laranja', 'Branco', 'Lilás', 'Bege', 'Turquesa'];
+    return [$a, $b, $cores];
+}
+function ln_horo_pick($arr, $seed, $avoid = null) {
+    $n = count($arr); $i = hexdec(substr(md5($seed), 0, 8)) % $n;
+    if ($avoid !== null && $arr[$i] === $avoid) { $i = ($i + 1) % $n; }
+    return $arr[$i];
+}
+function ln_horo_publicar($ts = null) {
+    $tz = new DateTimeZone('America/Sao_Paulo');
+    $d = new DateTime('@' . ($ts ?: time())); $d->setTimezone($tz);
+    $ymd = $d->format('Y-m-d'); $slug = 'horoscopo-do-dia-' . $ymd;
+    if (get_page_by_path($slug, OBJECT, 'post')) { return 0; }
+    $sem = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+    $mes = ['', 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+    $dia_sem = $sem[(int) $d->format('w')]; $dia = (int) $d->format('j'); $m = $mes[(int) $d->format('n')]; $ano = $d->format('Y');
+    $cab = ucfirst($dia_sem) . ', ' . $dia . ' de ' . $m . ' de ' . $ano;
+    $ontem = (clone $d)->modify('-1 day')->format('Y-m-d');
+    [$fa, $fb, $cores] = ln_horo_frases();
+    $css = '.ln-horo{--n:#06122F;--t:#0AA6A0;font-family:inherit;margin:8px 0 6px}.ln-horo .hz-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--n);color:#fff;border-radius:12px 12px 0 0;padding:12px 16px}.ln-horo .hz-top b{font-size:15px;letter-spacing:.5px}.ln-horo .hz-top span{font-size:12px;opacity:.8}.ln-horo .hz-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#dfe4ee;border:1px solid #dfe4ee;border-top:0;border-radius:0 0 12px 12px;overflow:hidden}.ln-horo .hz{background:#fff;padding:14px 14px 12px}.ln-horo .hz-h{display:flex;align-items:center;gap:10px;margin-bottom:6px}.ln-horo .hz-ic{flex:none;width:34px;height:34px;border-radius:50%;background:var(--n);color:var(--t);display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;font-family:"Segoe UI Symbol","DejaVu Sans",sans-serif}.ln-horo .hz-h strong{display:block;font-size:15px;color:var(--n);line-height:1.1}.ln-horo .hz-h small{font-size:11px;color:#6b7280}.ln-horo .hz p{font-size:13px;line-height:1.45;color:#333;margin:0 0 8px}.ln-horo .hz-meta{font-size:11px;color:var(--t);font-weight:700}.ln-horo .hz-foot{font-size:11px;color:#6b7280;margin-top:8px}@media(max-width:900px){.ln-horo .hz-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:520px){.ln-horo .hz-grid{grid-template-columns:1fr}}';
+    $cards = '';
+    foreach (ln_horo_signos() as [$nome, $sim, $per]) {
+        $a = ln_horo_pick($fa, $ymd . $nome . 'a', ln_horo_pick($fa, $ontem . $nome . 'a'));
+        $b = ln_horo_pick($fb, $ymd . $nome . 'b', ln_horo_pick($fb, $ontem . $nome . 'b'));
+        $cor = ln_horo_pick($cores, $ymd . $nome . 'c');
+        $num = 1 + hexdec(substr(md5($ymd . $nome . 'n'), 0, 6)) % 60;
+        $cards .= '<div class="hz"><div class="hz-h"><span class="hz-ic">' . $sim . '&#xFE0E;</span><div><strong>' . $nome . '</strong><small>' . $per . '</small></div></div><p>' . esc_html($a . ' ' . $b) . '</p><div class="hz-meta">Cor: ' . $cor . ' · Número: ' . $num . '</div></div>';
+    }
+    $html = "<!-- wp:html -->\n<style>$css</style><div class=\"ln-horo\"><div class=\"hz-top\"><b>HORÓSCOPO DO DIA</b><span>$cab</span></div><div class=\"hz-grid\">$cards</div><div class=\"hz-foot\">Conteúdo de entretenimento. Atualizado diariamente pelo Leste News.</div></div>\n<!-- /wp:html -->";
+    $cat = get_category_by_slug('entretenimento'); $tag = get_term_by('slug', 'horoscopo', 'post_tag');
+    kses_remove_filters();
+    $id = wp_insert_post([
+        'post_title' => 'Horóscopo do dia: ' . $dia_sem . ', ' . $dia . ' de ' . $m . ' de ' . $ano,
+        'post_name' => $slug, 'post_status' => 'publish', 'post_author' => 1, 'post_content' => $html,
+        'post_excerpt' => 'Previsões para os 12 signos neste ' . $dia_sem . ', ' . $dia . ' de ' . $m . ', com cor e número da sorte.',
+        'post_category' => $cat ? [$cat->term_id] : [], 'tags_input' => $tag ? [$tag->term_id] : [],
+    ]);
+    kses_init_filters();
+    if ($id && !is_wp_error($id)) { do_action('litespeed_purge_all'); }
+    return $id;
+}
+add_action('init', function () {
+    if (!wp_next_scheduled('ln_horoscopo_diario')) {
+        $t = new DateTime('tomorrow 00:05', new DateTimeZone('America/Sao_Paulo'));
+        wp_schedule_event($t->getTimestamp(), 'daily', 'ln_horoscopo_diario');
+    }
+});
+add_action('ln_horoscopo_diario', function () { ln_horo_publicar(); });
+/* Rede de segurança: se ninguém disparou o cron, a primeira visita do dia publica */
+add_action('template_redirect', function () {
+    if (is_front_page() && !get_transient('ln_horo_check')) { set_transient('ln_horo_check', 1, 15 * MINUTE_IN_SECONDS); ln_horo_publicar(); }
+});
