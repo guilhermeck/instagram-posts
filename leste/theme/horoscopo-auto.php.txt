@@ -67,6 +67,7 @@ function ln_horo_publicar($ts = null) {
         'post_name' => $slug, 'post_status' => 'publish', 'post_author' => 1, 'post_content' => $html,
         'post_excerpt' => 'Previsões para os 12 signos neste ' . $dia_sem . ', ' . $dia . ' de ' . $m . ', com cor e número da sorte.',
         'post_category' => $cat ? [$cat->term_id] : [], 'tags_input' => $tag ? [$tag->term_id] : [],
+        'meta_input' => ['_thumbnail_id' => (int) get_option('ln_horo_thumb', 154)],
     ]);
     kses_init_filters();
     if ($id && !is_wp_error($id)) { do_action('litespeed_purge_all'); }
