@@ -1,0 +1,10 @@
+/* Logo temporária "Eleições 2026" até 26/10/2026 12h (Brasília); depois volta sozinha para a logo original */
+function ln_logo_eleicoes_ativa() {
+    $fim = new DateTime('2026-10-26 12:00:00', new DateTimeZone('America/Sao_Paulo'));
+    return time() < $fim->getTimestamp();
+}
+add_action('init', function () {
+    $fim = (new DateTime('2026-10-26 12:00:00', new DateTimeZone('America/Sao_Paulo')))->getTimestamp();
+    if (time() < $fim && !wp_next_scheduled('ln_logo_eleicoes_fim')) { wp_schedule_single_event($fim + 30, 'ln_logo_eleicoes_fim'); }
+});
+add_action('ln_logo_eleicoes_fim', function () { do_action('litespeed_purge_all'); });
