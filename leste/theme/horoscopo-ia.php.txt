@@ -1,0 +1,40 @@
+/* Horóscopo com IA (opcional): se houver uma chave da API da Anthropic em Ferramentas > Horóscopo IA, os textos são escritos pela IA; sem chave, usa o banco de frases */
+function ln_horo_ia_textos($cab) {
+    $key = trim((string) get_option('ln_horo_ia_key', ''));
+    if (!$key) { return []; }
+    $model = trim((string) get_option('ln_horo_ia_model', 'claude-haiku-4-5')) ?: 'claude-haiku-4-5';
+    $signos = implode(', ', array_column(ln_horo_signos(), 0));
+    $prompt = "Escreva o horóscopo de $cab para um portal de notícias regional do Paraná. Para cada signo ($signos), escreva 1 ou 2 frases originais em português do Brasil, com no máximo 200 caracteres, tom leve e positivo. Não fale de doenças, não prometa dinheiro e não cite política. Responda APENAS com um objeto JSON no formato {\"Áries\":\"texto\", ...} com os 12 signos.";
+    $r = wp_remote_post('https://api.anthropic.com/v1/messages', [
+        'timeout' => 45,
+        'headers' => ['x-api-key' => $key, 'anthropic-version' => '2023-06-01', 'content-type' => 'application/json'],
+        'body' => wp_json_encode(['model' => $model, 'max_tokens' => 1500, 'messages' => [['role' => 'user', 'content' => $prompt]]]),
+    ]);
+    if (is_wp_error($r) || wp_remote_retrieve_response_code($r) !== 200) { update_option('ln_horo_ia_erro', is_wp_error($r) ? $r->get_error_message() : wp_remote_retrieve_body($r), false); return []; }
+    $j = json_decode(wp_remote_retrieve_body($r), true);
+    $txt = $j['content'][0]['text'] ?? '';
+    if (preg_match('/\{.*\}/s', $txt, $m)) { $out = json_decode($m[0], true); }
+    if (empty($out) || !is_array($out)) { update_option('ln_horo_ia_erro', 'Resposta da IA sem JSON válido.', false); return []; }
+    $limpo = [];
+    foreach ($out as $s => $t) { $t = trim(wp_strip_all_tags((string) $t)); if ($t !== '') { $limpo[$s] = mb_substr($t, 0, 260); } }
+    delete_option('ln_horo_ia_erro');
+    return $limpo;
+}
+add_action('admin_menu', function () {
+    add_management_page('Horóscopo IA', 'Horóscopo IA', 'manage_options', 'ln-horo-ia', function () {
+        if (isset($_POST['ln_horo_ia_salvar']) && check_admin_referer('ln_horo_ia')) {
+            update_option('ln_horo_ia_key', sanitize_text_field(wp_unslash($_POST['ln_horo_ia_key'] ?? '')), false);
+            update_option('ln_horo_ia_model', sanitize_text_field(wp_unslash($_POST['ln_horo_ia_model'] ?? '')), false);
+            echo '<div class="updated"><p>Salvo.</p></div>';
+        }
+        $tem = (bool) get_option('ln_horo_ia_key', ''); $err = get_option('ln_horo_ia_erro', '');
+        echo '<div class="wrap"><h1>Horóscopo IA</h1><p>O horóscopo é publicado automaticamente todo dia às 00h05. Sem chave, o site usa o banco de frases próprio. Com uma chave da API da Anthropic (console.anthropic.com), os textos passam a ser escritos pela IA, e o banco de frases continua como reserva se a IA falhar.</p>';
+        echo '<form method="post">'; wp_nonce_field('ln_horo_ia');
+        echo '<table class="form-table"><tr><th>Chave da API</th><td><input type="password" name="ln_horo_ia_key" class="regular-text" value="" placeholder="' . ($tem ? 'Chave salva (deixe em branco para remover)' : 'sk-ant-...') . '"></td></tr>';
+        echo '<tr><th>Modelo</th><td><input type="text" name="ln_horo_ia_model" class="regular-text" value="' . esc_attr(get_option('ln_horo_ia_model', 'claude-haiku-4-5')) . '"></td></tr></table>';
+        echo '<p><button class="button button-primary" name="ln_horo_ia_salvar" value="1">Salvar</button></p></form>';
+        echo '<p>Status: <strong>' . ($tem ? 'IA ativada' : 'usando banco de frases') . '</strong></p>';
+        if ($err) { echo '<p style="color:#b32d2e">Último erro da IA: ' . esc_html(mb_substr($err, 0, 300)) . '</p>'; }
+        echo '</div>';
+    });
+});
