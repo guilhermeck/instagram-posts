@@ -1,0 +1,25 @@
+
+/* ---------- Compartilhamento (Open Graph / Twitter): página inicial usa a arte do Leste; matérias usam a imagem destacada ---------- */
+add_action('wp_head', function () {
+    $site = get_bloginfo('name');
+    $def_img = 'https://lestenewstb.com.br/wp-content/uploads/2026/10/leste-news-compartilhamento.jpg';
+    $img = $def_img; $w = 1080; $h = 1350; $type = 'website';
+    $title = $site; $desc = get_bloginfo('description'); $url = home_url('/');
+    if (is_singular()) {
+        $p = get_queried_object();
+        $type = 'article'; $title = get_the_title($p); $url = get_permalink($p);
+        $desc = has_excerpt($p) ? get_the_excerpt($p) : wp_trim_words(wp_strip_all_tags(strip_shortcodes($p->post_content)), 30);
+        $tid = get_post_thumbnail_id($p);
+        if ($tid) { $src = wp_get_attachment_image_src($tid, 'large'); if ($src) { [$img, $w, $h] = $src; } }
+    } elseif (is_category() || is_tag()) {
+        $t = get_queried_object(); $title = single_term_title('', false) . ' | ' . $site; $url = get_term_link($t);
+        $desc = term_description($t) ? wp_strip_all_tags(term_description($t)) : $desc;
+    }
+    $desc = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $desc)));
+    $m = function ($k, $v, $attr = 'property') { if ($v !== '' && $v !== null) { echo '<meta ' . $attr . '="' . esc_attr($k) . '" content="' . esc_attr($v) . '">' . "\n"; } };
+    $m('og:locale', 'pt_BR'); $m('og:site_name', $site); $m('og:type', $type); $m('og:title', $title); $m('og:description', $desc); $m('og:url', is_wp_error($url) ? home_url('/') : $url);
+    $m('og:image', $img); $m('og:image:secure_url', $img); $m('og:image:width', (string) $w); $m('og:image:height', (string) $h); $m('og:image:alt', $title);
+    $m('twitter:card', 'summary_large_image', 'name'); $m('twitter:title', $title, 'name'); $m('twitter:description', $desc, 'name'); $m('twitter:image', $img, 'name');
+    if ($desc && !is_singular()) { $m('description', $desc, 'name'); }
+    if (is_singular('post')) { $m('article:published_time', get_the_date('c')); $m('article:modified_time', get_the_modified_date('c')); }
+}, 5);
